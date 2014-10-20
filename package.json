@@ -1,0 +1,14 @@
+{
+  "name": "node-docker-example",
+  "author": "Halvard Skogsrud <hskogsru@thoughtworks.com>",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node app/index.js"
+  },
+  "dependencies": {
+    "pg": "3.6.0",
+    "express": "4.9.8"
+  }
+}
+
