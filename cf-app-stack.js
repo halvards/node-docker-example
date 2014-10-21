@@ -40,7 +40,15 @@ var stack = {
         "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
         "Tags": [
           { "Key": "Name", "Value": "The Server" }
-        ]
+        ],
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["",[
+            "#!/bin/bash -ex","\n",
+            "add-apt-repository --yes ppa:chris-lea/node.js","\n",
+            "apt-get update","\n"
+            "apt-get -y install nodejs","\n",
+            "apt-get -y install build-essential","\n",
+            "apt-get -y install postgresql","\n"
+            ]]}}
       }
     },
 
