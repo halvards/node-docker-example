@@ -1,3 +1,4 @@
+var uuid = require('node-uuid');
 var AWS = require('aws-sdk');
 var cloudformation = new AWS.CloudFormation({
   "region": "ap-southeast-2"
@@ -25,7 +26,7 @@ var stack = {
   "Mappings" : {
     "RegionMap" : {
         "ap-southeast-2" : {
-          "AMI" : "ami-1711732d"
+          "AMI" : "ami-1f117325"
       }
     }
   },
@@ -71,7 +72,7 @@ var stack = {
 };
 
 cloudformation.createStack({
-  "StackName": "stack1",
+  "StackName": "nodeapp-" + uuid.v4(),
   "TemplateBody": JSON.stringify(stack)
 }, function(err, data) {
   if (err) console.log(err, err.stack); // an error occurred
