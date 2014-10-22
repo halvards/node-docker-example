@@ -35,7 +35,7 @@
     "Ec2InstanceDNSRecord": {
       "Type" : "AWS::Route53::RecordSet",
       "Properties": {
-        "HostedZoneId": "/hostedzone/ZLP14HUM0WJG0",
+        "HostedZoneName": "services.company.",
         "Name": { "Fn::Join" : [ "", ["Ec2Instance.", { "Ref" : "AWS::StackName" }, ".", { "Ref" : "HostedZone" }, "."]]},
         "Type": "A",
         "TTL": 300,
