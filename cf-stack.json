@@ -14,18 +14,35 @@
       "Default" : "t2.micro",
       "AllowedValues" : ["t2.micro", "t2.small", "t2.medium"],
       "Description" : "Enter t2.micro, t2.small, or t2.medium. Default is t2.micro."
+    },
+    
+    "HostedZone": {
+      "Type": "String",
+      "Default": "services.myob",
+      "Description": "Route 53 Hosted Zone"
     }
   },
 
   "Mappings" : {
     "RegionMap" : {
-        "ap-southeast-2" : {
-          "AMI" : "ami-1f117325"
+      "ap-southeast-2" : {
+        "AMI" : "ami-1f117325"
       }
-    }
+    } 
   },
 
   "Resources" : {
+    "Ec2InstanceDNSRecord": {
+      "Type" : "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneId": "/hostedzone/ZLP14HUM0WJG0",
+        "Name": { "Fn::Join" : [ "", ["Ec2Instance.", { "Ref" : "AWS::StackName" }, ".", { "Ref" : "HostedZone" }, "."]]},
+        "Type": "A",
+        "TTL": 300,
+        "ResourceRecords" : [ { "Fn::GetAtt" : [ "Ec2Instance", "PublicIp" ] } ]
+      }
+    },
+
     "Ec2Instance" : {
       "Type" : "AWS::EC2::Instance",
       "Properties" : {

@@ -6,9 +6,11 @@ var cloudformation = new AWS.CloudFormation({
   "region": "ap-southeast-2"
 });
 
+var stackName = "nodeapp-" + uuid.v4();
 var stack = require('./cf-stack.json');
 
 var userdata = shell.exec("python create_mime.py cloud-config.yaml:cloud-config userdata-script.sh:x-shellscript", {silent: true}).output;
+userdata = userdata.replace(/\$STACK_NAME/g, stackName) // horrible - need to find a better way to include variables in the cloud-config
 stack.Resources.Ec2Instance.Properties.UserData["Fn::Base64"] = userdata;
 
 var stackName = "nodeapp-" + uuid.v4();

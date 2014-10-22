@@ -50,7 +50,7 @@ write_files:
     path: /etc/bind/named.conf.options
   - content: |
       nameserver 127.0.0.1
-      search qa1.services.myob
+      search $STACK_NAME.services.myob
     path: /tmp/resolv.conf
 
 runcmd:
