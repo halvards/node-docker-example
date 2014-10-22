@@ -12,5 +12,8 @@
     "express": "4.9.8",
     "node-uuid": "1.4.1",
     "pg": "3.6.0"
+  },
+  "devDependencies": {
+    "shelljs": "0.3.0"
   }
 }
