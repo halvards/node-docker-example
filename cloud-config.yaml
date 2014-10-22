@@ -25,7 +25,10 @@ packages:
  - python-setuptools  # required for CloudFormation Helper Scripts
 
 runcmd:
- - createdb nodeapp  # Create PostgreSQL database
+ - easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+ - sudo -u postgres psql -c "CREATE ROLE nodeappuser WITH LOGIN PASSWORD 'password';"
+ - sudo -u postgres createdb nodeappdb
+ - sudo -u postgres psql -c "GRANT ALL ON DATABASE nodeappdb TO nodeappuser;"
 
 locale: en_US.UTF-8
 timezone: UTC
