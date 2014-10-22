@@ -6,7 +6,7 @@ var elasticache = new AWS.ElastiCache({
 });
 
 var randomString = function() {
-  return Math.random().toString(36).slice(12);
+  return Math.random().toString(36).substr(2, 6);
 };
 
 var primaryClusterId = "tax-2a-" + randomString();
