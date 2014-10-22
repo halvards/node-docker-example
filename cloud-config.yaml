@@ -23,12 +23,45 @@ packages:
  - nodejs
  - postgresql
  - python-setuptools  # required for CloudFormation Helper Scripts
+ - bind9
+
+write_files:
+  - content: |
+      zone "services.myob" {
+        type forward;
+        forwarders {
+          205.251.192.132;
+          205.251.195.77;
+          205.251.196.125;
+          205.251.199.146;
+        };
+        forward only;
+      };
+    path: /etc/bind/named.conf.local
+  - content: |
+      options {
+        directory "/var/cache/bind";
+        recursion yes;
+        dnssec-enable yes;
+        dnssec-validation yes;
+        auth-nxdomain no;
+        listen-on-v6 { any; };
+      };
+    path: /etc/bind/named.conf.options
+  - content: |
+      nameserver 127.0.0.1
+      search qa1.services.myob
+    path: /tmp/resolv.conf
 
 runcmd:
  - easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
  - sudo -u postgres psql -c "CREATE ROLE nodeappuser WITH LOGIN PASSWORD 'password';"
  - sudo -u postgres createdb nodeappdb
  - sudo -u postgres psql -c "GRANT ALL ON DATABASE nodeappdb TO nodeappuser;"
+ - resolvconf -a eth0.dhclient < /tmp/resolv.conf
+ - resolvconf -u
+ - service bind9 restart
+ - rm /tmp/resolv.conf
 
 locale: en_US.UTF-8
 timezone: UTC
