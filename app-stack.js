@@ -2,6 +2,11 @@ var uuid = require('node-uuid');
 var shell = require('shelljs');
 var AWS = require('aws-sdk');
 
+var creds = new AWS.SharedIniFileCredentials({
+  profile: 'company'
+});
+AWS.config.credentials = creds;
+
 var cloudformation = new AWS.CloudFormation({
   "apiVersion": "2010-05-15",
   "region": "ap-southeast-2"
