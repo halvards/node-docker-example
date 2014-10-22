@@ -18,7 +18,7 @@
     
     "HostedZone": {
       "Type": "String",
-      "Default": "services.myob",
+      "Default": "services.company",
       "Description": "Route 53 Hosted Zone"
     }
   },
