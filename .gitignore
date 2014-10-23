@@ -26,3 +26,13 @@ node_modules
 
 # Users Environment Variables
 .lock-wscript
+
+# JetBrains editor files
+.idea
+*.ipr
+*.iws
+*.iml
+
+# Temporary files
+*.tmp
+
