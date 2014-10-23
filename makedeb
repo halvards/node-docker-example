@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+
+VERSION='1.0'
+ITERATION='1'
+NAME='the-app'
+
+fpm -f -s dir -t deb \
+  --name $NAME \
+  --description 'The App' \
+  --url 'http://docs.services.company/$NAME' \
+  --vendor Company \
+  --license MIT \
+  --maintainer james.gregory@thoughtworks.com \
+  --version $VERSION --iteration $ITERATION \
+  --depends nodejs \
+  --directories /opt/$NAME \
+  --config-files /etc/init/$NAME.conf \
+  --architecture amd64 \
+  app.js=/opt/$NAME/app.js \
+  node_modules=/opt/$NAME \
+  package/upstart.conf=/etc/init/$NAME.conf
