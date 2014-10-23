@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+// This script is too long and could be vastly simplified by using a mix of
+// a CloudFormation template and two API calls: create elasticache replication
+// group and create read replica cache cluster.
+
 var Promise = require('es6-promise').Promise;
 var AWS = require('aws-sdk');
 
@@ -37,15 +41,97 @@ var readReplicaClusterParams = {
   "ReplicationGroupId": replicationGroupId
 };
 
+var ec2 = new AWS.EC2({
+  "apiVersion": '2014-06-15',
+  "region": "ap-southeast-2"
+});
+
+var elasticacheSecurityGroupName = "elasticache-redis-access-internal";
+
 new Promise(function(resolve, reject) {
-  elasticache.createCacheCluster(primaryCacheClusterParams, function(err, data) {
+  ec2.describeSecurityGroups({"GroupNames": [elasticacheSecurityGroupName]}, function(err, data) {
     if (err) {
-      reject(err);
+      if (err.code === "InvalidGroup.NotFound") {
+        console.log("Security group for ElastiCache Redis cache cluster does not exist. Creating now.");
+        resolve(false);  // security group doesn't exist, let's create it
+      } else {
+        reject(err);
+      }
     } else {
-      console.log(data);           // successful response
-      resolve(data);
+      console.log("Security group for ElastiCache Redis cache cluster already exists. Skipping creation.");
+      resolve(true);  // security group exists, no need to create it
     }
-  })
+  });
+}).then(function(securityGroupExists) {
+  if (!securityGroupExists) {
+    return new Promise(function(resolve, reject) {
+      ec2.describeVpcs({}, function(err, data) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data.Vpcs[0].CidrBlock);
+        }
+      });
+    }).then(function(cidrBlock) {
+      return new Promise(function(resolve, reject) {
+        var securityGroupParams = {
+          "GroupName": elasticacheSecurityGroupName,
+          "Description": "Enable Redis access on port 6379 from machines in VPC"
+        };
+        ec2.createSecurityGroup(securityGroupParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(cidrBlock);
+          }
+        });
+      })
+    }).then(function(cidrBlock) {
+      return new Promise(function(resolve, reject) {
+        var securityGroupIngressParams = {
+          "CidrIp": cidrBlock,
+          "FromPort": 6379,
+          "ToPort": 6379,
+          "GroupName": elasticacheSecurityGroupName,
+          "IpProtocol": "tcp"
+        };
+        ec2.authorizeSecurityGroupIngress(securityGroupIngressParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data);
+          }
+        });
+      })
+    }).then(function() {
+      return new Promise(function(resolve, reject) {
+        var securityGroupEgressParams = {
+          "FromPort": -1,
+          "ToPort": -1,
+          "GroupName": elasticacheSecurityGroupName,
+          "IpProtocol": "-1"
+        };
+        ec2.authorizeSecurityGroupIngress(securityGroupEgressParams, function(err, data) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data);
+          }
+        });
+      })
+    });
+  }
+}).then(function() {
+  return new Promise(function(resolve, reject) {
+    elasticache.createCacheCluster(primaryCacheClusterParams, function(err, data) {
+      if (err) {
+        reject(err);
+      } else {
+        console.log(data);           // successful response
+        resolve(data);
+      }
+    })
+  });
 }).then(function(data) {
   return new Promise(function(resolve, reject) {
     (function pollUntilAvailable() {
