@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var uuid = require('node-uuid');
 var shell = require('shelljs');
 var AWS = require('aws-sdk');

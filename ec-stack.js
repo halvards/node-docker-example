@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var Promise = require('es6-promise').Promise;
 var AWS = require('aws-sdk');
 
