@@ -1,6 +1,9 @@
 {
   "name": "node-docker-example",
-  "author": "Halvard Skogsrud <hskogsru@thoughtworks.com>",
+  "contributors": [
+    "Halvard Skogsrud",
+    "James Gregory"
+  ],
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -11,7 +14,8 @@
     "es6-promise": "2.0.0",
     "express": "4.9.8",
     "node-uuid": "1.4.1",
-    "pg": "3.6.0"
+    "pg": "3.6.0",
+    "redis": "0.12.1"
   },
   "devDependencies": {
     "shelljs": "0.3.0"
