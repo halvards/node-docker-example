@@ -1,11 +1,11 @@
 var express = require('express');
 var pg = require('pg');
 
-var dbuser = "nodeapp";
+var dbuser = "nodeappuser";
 var dbpass = "password";
 var dbhost = "localhost";
 var dbport = "5432";
-var dbname = "nodeapp";
+var dbname = "nodeappdb";
 var conString = "postgres://" + dbuser + ":" + dbpass + "@" + dbhost + ":" + dbport + "/" + dbname;
 
 var app = express();
