@@ -25,8 +25,9 @@ stack.Resources.Ec2Instance.Properties.UserData["Fn::Base64"] = userdata;
 var stackName = "nodeapp-" + randomString();
 
 cloudformation.createStack({
-  "StackName": stackName,
-  "TemplateBody": JSON.stringify(stack)
+  StackName: stackName,
+  Capabilities: ['CAPABILITY_IAM'],
+  TemplateBody: JSON.stringify(stack)
 }, function(err, data) {
   if (err) {
     console.log(err, err.stack);  // an error occurred

@@ -24,6 +24,7 @@ packages:
  - postgresql
  - python-setuptools  # required for CloudFormation Helper Scripts
  - bind9
+ - s3cmd
 
 write_files:
   - content: |
