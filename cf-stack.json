@@ -90,12 +90,12 @@
         "IamInstanceProfile": { "Ref" : "InstanceProfile" },
         "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
         "KeyName" : { "Ref" : "KeyName" },
-        "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "SshAccessSecurityGroup" } ],
         "UserData" : { "Fn::Base64" : "#placeholder" }
       }
     },
 
-    "InstanceSecurityGroup" : {
+    "SshAccessSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "Enable SSH access via port 22",
