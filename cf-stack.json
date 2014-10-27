@@ -89,6 +89,7 @@
       "Properties" : {
         "IamInstanceProfile": { "Ref" : "InstanceProfile" },
         "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+        "InstanceType": { "Ref": "InstanceTypeParameter" },
         "KeyName" : { "Ref" : "KeyName" },
         "SecurityGroups" : [ { "Ref" : "SshAccessSecurityGroup" }, { "Ref": "NodeAppSecurityGroup" } ],
         "UserData" : { "Fn::Base64" : "#placeholder" }
