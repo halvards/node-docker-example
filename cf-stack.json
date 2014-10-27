@@ -90,7 +90,7 @@
         "IamInstanceProfile": { "Ref" : "InstanceProfile" },
         "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
         "KeyName" : { "Ref" : "KeyName" },
-        "SecurityGroups" : [ { "Ref" : "SshAccessSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "SshAccessSecurityGroup" }, { "Ref": "NodeAppSecurityGroup" } ],
         "UserData" : { "Fn::Base64" : "#placeholder" }
       }
     },
@@ -105,6 +105,33 @@
           "ToPort" : "22",
           "CidrIp" : "0.0.0.0/0"
         } ]
+      }
+    },
+
+    "NodeAppSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Expose Node App",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "3000",
+          "ToPort" : "3000",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+
+    "ElbInstance": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "AvailabilityZones": [{ "Fn::GetAtt" : [ "Ec2Instance", "AvailabilityZone" ] }],
+        "Instances": [ { "Ref": "Ec2Instance" }],
+        "Listeners": [{
+          "InstancePort": "3000",
+          "InstanceProtocol": "HTTP",
+          "LoadBalancerPort": "80",
+          "Protocol": "HTTP"
+        }]
       }
     }
   },
@@ -124,6 +151,9 @@
     },
     "PublicDnsName" : {
       "Value" : { "Fn::GetAtt" : [ "Ec2Instance", "PublicDnsName" ] }
+    },
+    "ElbPublicDnsName" : {
+      "Value" : { "Fn::GetAtt" : [ "ElbInstance", "DNSName" ] }
     }
   }
 }
