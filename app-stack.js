@@ -128,7 +128,7 @@ var randomString = function() {
   return Math.random().toString(36).substr(2, 6);
 };
 
-var stack = require('./cf-stack.json');
+var stack = require('./app-stack.json');
 var userdata = shell.exec("./write-mime-multipart stack/*", {silent: true}).output;
 userdata = userdata.replace(/\$STACK_NAME/g, stackName) // horrible - need to find a better way to include variables in the cloud-config
 stack.Resources.Ec2Instance.Properties.UserData["Fn::Base64"] = userdata;
