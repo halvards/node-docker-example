@@ -9,6 +9,7 @@
       "Type" : "String",
       "Default": "ec2-keypair-ap-syd"
     },
+
     "InstanceTypeParameter" : {
       "Type" : "String",
       "Default" : "t2.micro",
@@ -20,13 +21,33 @@
       "Type": "String",
       "Default": "services.company",
       "Description": "Route 53 Hosted Zone"
+    },
+
+    "VpcId": {
+      "Type": "String",
+      "Description": "Vpc Id to deploy instances into"
+    },
+
+    "PublicSubnetId": {
+      "Type": "String",
+      "Description": "Public Subnet Id to deploy instances into"
+    },
+
+    "PrivateSubnetId": {
+      "Type": "String",
+      "Description": "Private Subnet Id to deploy instances into"
+    },
+
+    "PrivateSubnetDefaultSecurityGroupId": {
+      "Type": "String",
+      "Description": "The default security group to assign to all instances in the Private Subnet"
     }
   },
 
   "Mappings" : {
     "RegionMap" : {
       "ap-southeast-2" : {
-        "AMI" : "ami-1f117325"
+        "AMI" : "ami-1711732d"
       }
     } 
   },
@@ -39,7 +60,7 @@
         "Name": { "Fn::Join" : [ "", ["Ec2Instance.", { "Ref" : "AWS::StackName" }, ".", { "Ref" : "HostedZone" }, "."]]},
         "Type": "A",
         "TTL": 300,
-        "ResourceRecords" : [ { "Fn::GetAtt" : [ "Ec2Instance", "PublicIp" ] } ]
+        "ResourceRecords" : [ { "Fn::GetAtt" : [ "Ec2Instance", "PrivateIp" ] } ]
       }
     },
 
@@ -91,7 +112,8 @@
         "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
         "InstanceType": { "Ref": "InstanceTypeParameter" },
         "KeyName" : { "Ref" : "KeyName" },
-        "SecurityGroups" : [ { "Ref" : "SshAccessSecurityGroup" }, { "Ref": "NodeAppSecurityGroup" } ],
+        "SecurityGroupIds" : [ { "Ref" : "SshAccessSecurityGroup" }, { "Ref": "NodeAppSecurityGroup" }, { "Ref": "PrivateSubnetDefaultSecurityGroupId" }],
+        "SubnetId": { "Ref": "PrivateSubnetId" },
         "UserData" : { "Fn::Base64" : "#placeholder" }
       }
     },
@@ -105,34 +127,51 @@
           "FromPort" : "22",
           "ToPort" : "22",
           "CidrIp" : "0.0.0.0/0"
-        } ]
+        } ],
+        "VpcId": { "Ref": "VpcId" }
       }
     },
 
-    "NodeAppSecurityGroup" : {
-      "Type" : "AWS::EC2::SecurityGroup",
-      "Properties" : {
-        "GroupDescription" : "Expose Node App",
-        "SecurityGroupIngress" : [ {
-          "IpProtocol" : "tcp",
-          "FromPort" : "3000",
-          "ToPort" : "3000",
-          "CidrIp" : "0.0.0.0/0"
-        } ]
+    "NodeAppSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Expose Node App",
+        "SecurityGroupIngress": [{
+          "IpProtocol": "tcp",
+          "FromPort": "3000",
+          "ToPort": "3000",
+          "CidrIp": "0.0.0.0/0"
+        }],
+        "VpcId": { "Ref": "VpcId" }
+      }
+    },
+
+    "ElbSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Load balancer HTTP",
+        "SecurityGroupIngress": [{
+          "IpProtocol": "tcp",
+          "FromPort": "80",
+          "ToPort": "80",
+          "CidrIp": "0.0.0.0/0"
+        }],
+        "VpcId": { "Ref": "VpcId" }
       }
     },
 
     "ElbInstance": {
       "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties": {
-        "AvailabilityZones": [{ "Fn::GetAtt" : [ "Ec2Instance", "AvailabilityZone" ] }],
+        "Subnets": [{ "Ref": "PublicSubnetId" }],
         "Instances": [ { "Ref": "Ec2Instance" }],
         "Listeners": [{
           "InstancePort": "3000",
           "InstanceProtocol": "HTTP",
           "LoadBalancerPort": "80",
           "Protocol": "HTTP"
-        }]
+        }],
+        "SecurityGroups": [{ "Ref": "ElbSecurityGroup" }]
       }
     }
   },
@@ -145,13 +184,6 @@
     "AvailabilityZone" : {
       "Description" : "Availability Zone of the newly created EC2 instance",
       "Value" : { "Fn::GetAtt" : [ "Ec2Instance", "AvailabilityZone" ] }
-    },
-    "PublicIP" : {
-      "Description" : "Public IP address of the newly created EC2 instance",
-      "Value" : { "Fn::GetAtt" : [ "Ec2Instance", "PublicIp" ] }
-    },
-    "PublicDnsName" : {
-      "Value" : { "Fn::GetAtt" : [ "Ec2Instance", "PublicDnsName" ] }
     },
     "ElbPublicDnsName" : {
       "Value" : { "Fn::GetAtt" : [ "ElbInstance", "DNSName" ] }
