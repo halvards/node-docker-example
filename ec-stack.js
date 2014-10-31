@@ -7,6 +7,11 @@
 var Promise = require('es6-promise').Promise;
 var AWS = require('aws-sdk');
 
+var creds = new AWS.SharedIniFileCredentials({
+  profile: 'company'
+});
+AWS.config.credentials = creds;
+
 var elasticache = new AWS.ElastiCache({
   "apiVersion": "2014-07-15",
   "region": "ap-southeast-2"
@@ -21,32 +26,44 @@ var primaryClusterId = "primary-2a-" + suffix;
 var replicationGroupId = "repgroup-" + suffix;
 var readReplicaClusterId = "replica-2b-" + suffix;
 
-var primaryCacheClusterParams = {
-  "CacheClusterId": primaryClusterId,
-  "CacheNodeType": "cache.t2.micro",
-  "Engine": "redis",
-  "NumCacheNodes": "1",
-  "PreferredAvailabilityZone": "ap-southeast-2a"
-};
-
-var replicationGroupParams = {
-  "PrimaryClusterId": primaryClusterId,
-  "ReplicationGroupDescription": "Replication Group",
-  "ReplicationGroupId": replicationGroupId
-};
-
-var readReplicaClusterParams = {
-  "CacheClusterId": readReplicaClusterId,
-  "PreferredAvailabilityZone": "ap-southeast-2b",
-  "ReplicationGroupId": replicationGroupId
-};
-
 var ec2 = new AWS.EC2({
   "apiVersion": '2014-06-15',
   "region": "ap-southeast-2"
 });
 
-var elasticacheSecurityGroupName = "elasticache-redis-access-internal";
+function extractPublicAndPrivateSubnets(stack) {
+  var describeSubnetPromises = ['Public subnet', 'Private subnet'].
+    map(function(subnetTag) {
+      return new Promise(function(resolve, reject) {
+        ec2.describeSubnets({
+          Filters: [{
+            Name: 'vpc-id',
+            Values: [stack.vpc.VpcId]
+          }, {
+            Name: 'tag:Name',
+            Values: [subnetTag]
+          }]
+        }, function(err, data) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(data);
+          }
+        });
+      });
+    });
+
+  return Promise.all(describeSubnetPromises).
+    then(function(subnets) {
+      stack.publicSubnetId = subnets[0].Subnets[0].SubnetId;
+      stack.privateSubnetId = subnets[1].Subnets[0].SubnetId;
+
+      return stack;
+    });
+}
+
+var cacheSubnetGroupName = 'cache-private-subnet-' + suffix;
+var elasticacheSecurityGroupName = "elasticache-redis-access-internal-" + suffix;
 
 new Promise(function(resolve, reject) {
   ec2.describeSecurityGroups({"GroupNames": [elasticacheSecurityGroupName]}, function(err, data) {
@@ -65,65 +82,76 @@ new Promise(function(resolve, reject) {
 }).then(function(securityGroupExists) {
   if (!securityGroupExists) {
     return new Promise(function(resolve, reject) {
-      ec2.describeVpcs({}, function(err, data) {
+      ec2.describeVpcs({ Filters: [{ Name: 'tag-key', Values: ['online-tax'] }]}, function(err, data) {
         if (err) {
           reject(err);
         } else {
-          resolve(data.Vpcs[0].CidrBlock);
+          resolve(data.Vpcs[0]);
         }
       });
-    }).then(function(cidrBlock) {
+    }).then(function(vpc) {
       return new Promise(function(resolve, reject) {
         var securityGroupParams = {
           "GroupName": elasticacheSecurityGroupName,
-          "Description": "Enable Redis access on port 6379 from machines in VPC"
+          "Description": "Enable Redis access on port 6379 from machines in VPC",
+          "VpcId": vpc.VpcId
         };
         ec2.createSecurityGroup(securityGroupParams, function(err, data) {
           if (err) {
             reject(err);
           } else {
-            resolve(cidrBlock);
+            resolve({
+              vpc: vpc,
+              securityGroup: data
+            });
           }
         });
       })
-    }).then(function(cidrBlock) {
+    }).then(function(stack) {
       return new Promise(function(resolve, reject) {
         var securityGroupIngressParams = {
-          "CidrIp": cidrBlock,
+          "CidrIp": stack.vpc.CidrBlock,
           "FromPort": 6379,
           "ToPort": 6379,
-          "GroupName": elasticacheSecurityGroupName,
+          "GroupId": stack.securityGroup.GroupId,
           "IpProtocol": "tcp"
         };
         ec2.authorizeSecurityGroupIngress(securityGroupIngressParams, function(err, data) {
           if (err) {
             reject(err);
           } else {
-            resolve(data);
-          }
-        });
-      })
-    }).then(function() {
-      return new Promise(function(resolve, reject) {
-        var securityGroupEgressParams = {
-          "FromPort": -1,
-          "ToPort": -1,
-          "GroupName": elasticacheSecurityGroupName,
-          "IpProtocol": "-1"
-        };
-        ec2.authorizeSecurityGroupIngress(securityGroupEgressParams, function(err, data) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(data);
+            resolve(stack);
           }
         });
       })
     });
   }
-}).then(function() {
+}).then(extractPublicAndPrivateSubnets).
+then(function(stack) {
   return new Promise(function(resolve, reject) {
-    elasticache.createCacheCluster(primaryCacheClusterParams, function(err, data) {
+    elasticache.createCacheSubnetGroup({
+      CacheSubnetGroupDescription: 'Private subnet cache group',
+      CacheSubnetGroupName: cacheSubnetGroupName,
+      SubnetIds: [stack.privateSubnetId]
+    }, function(err, data) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(stack)
+      }
+    })
+  });
+}).then(function(stack) {
+  return new Promise(function(resolve, reject) {
+    elasticache.createCacheCluster({
+      "CacheClusterId": primaryClusterId,
+      "CacheNodeType": "cache.t2.micro",
+      "Engine": "redis",
+      "NumCacheNodes": "1",
+      "PreferredAvailabilityZone": "ap-southeast-2a",
+      "SecurityGroupIds": [stack.securityGroup.GroupId],
+      "CacheSubnetGroupName": cacheSubnetGroupName
+    }, function(err, data) {
       if (err) {
         reject(err);
       } else {
@@ -155,7 +183,11 @@ new Promise(function(resolve, reject) {
   });
 }).then(function(status) {
   return new Promise(function(resolve, reject) {
-    elasticache.createReplicationGroup(replicationGroupParams, function(err, data) {
+    elasticache.createReplicationGroup({
+      "PrimaryClusterId": primaryClusterId,
+      "ReplicationGroupDescription": "Replication Group",
+      "ReplicationGroupId": replicationGroupId
+    }, function(err, data) {
       if (err) {
         reject(err);
       } else {
@@ -187,7 +219,11 @@ new Promise(function(resolve, reject) {
   });
 }).then(function(status) {
   return new Promise(function(resolve, reject) {
-    elasticache.createCacheCluster(readReplicaClusterParams, function(err, data) {
+    elasticache.createCacheCluster({
+      "CacheClusterId": readReplicaClusterId,
+      "PreferredAvailabilityZone": "ap-southeast-2b",
+      "ReplicationGroupId": replicationGroupId
+    }, function(err, data) {
       if (err) {
         reject(err);
       } else {
