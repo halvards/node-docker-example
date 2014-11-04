@@ -38,12 +38,14 @@ function extractPublicAndPrivateSubnets(vpc) {
       });
     });
 
+
   return Promise.all(describeSubnetPromises).
     then(function(subnets) {
       return {
-        vpcId: vpc.VpcId,
-        publicSubnetId: subnets[0].Subnets[0].SubnetId,
+        availabilityZone: subnets[0].Subnets[0].AvailabilityZone,
         privateSubnetId: subnets[1].Subnets[0].SubnetId,
+        publicSubnetId: subnets[0].Subnets[0].SubnetId,
+        vpcId: vpc.VpcId,
       };
     });
 }
@@ -59,10 +61,11 @@ function extractPrivateSubnetDefaultSecurityGroup(state) {
     }]
   }).then(function(securityGroups) {
     return {
-      vpcId: state.vpcId,
-      publicSubnetId: state.publicSubnetId,
-      privateSubnetId: state.privateSubnetId,
+      availabilityZone: state.availabilityZone,
       privateSubnetDefaultSecurityGroupId: securityGroups.SecurityGroups[0].GroupId,
+      privateSubnetId: state.privateSubnetId,
+      publicSubnetId: state.publicSubnetId,
+      vpcId: state.vpcId,
     }
   })
 }
@@ -76,6 +79,9 @@ function createStack(params) {
   stackTemplate.Resources.Ec2Instance.Properties.UserData["Fn::Base64"] = userdata;
 
   AwsStack.create(stackName, stackTemplate, [{
+    ParameterKey: 'AvailabilityZone',
+    ParameterValue: params.availabilityZone
+  }, {
     ParameterKey: 'VpcId',
     ParameterValue: params.vpcId
   }, {

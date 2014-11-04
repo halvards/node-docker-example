@@ -4,6 +4,11 @@
   "Description" : "Create an EC2 instance running Ubuntu 14.04 LTS.",
 
   "Parameters" : {
+    "AvailabilityZone": {
+      "Description": "AvailabilityZone to create instances in",
+      "Type": "String"
+    },
+
     "KeyName" : {
       "Description" : "Name of and existing EC2 KeyPair to enable SSH access to the instance",
       "Type" : "String",
@@ -108,6 +113,7 @@
     "Ec2Instance" : {
       "Type" : "AWS::EC2::Instance",
       "Properties" : {
+        "AvailabilityZone": { "Ref": "AvailabilityZone" },
         "IamInstanceProfile": { "Ref" : "InstanceProfile" },
         "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
         "InstanceType": { "Ref": "InstanceTypeParameter" },
