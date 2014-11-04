@@ -164,5 +164,11 @@
         "Tags": [{ "Key": "online-tax", "Value": "" }]
       }
     }
+  },
+
+  "Outputs" : {
+    "BastionPublicDnsName" : {
+      "Value" : { "Fn::GetAtt" : [ "Bastion", "DNSName" ] }
+    }
   }
 }
