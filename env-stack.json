@@ -59,8 +59,17 @@
         "ImageId": "ami-996402a3",
         "InstanceType": "t2.micro",
         "KeyName" : { "Ref" : "KeyName" },
+        "SourceDestCheck": false,
         "SubnetId": { "Ref": "PublicSubnet" },
         "Tags": [{ "Key": "Name", "Value": "NAT" }]
+      }
+    },
+
+    "NatIp": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "InstanceId": { "Ref": "Nat" }
       }
     },
 
