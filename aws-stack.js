@@ -1,5 +1,4 @@
 var AWS = require('aws-sdk');
-var shell = require('shelljs');
 
 var creds = new AWS.SharedIniFileCredentials({
   profile: 'company'
@@ -42,13 +41,8 @@ function pollUntilAvailable(stackName) {
 }
 
 module.exports = {
-  create: function(stackTemplate, stackName, params) {
+  create: function(stackName, stackTemplate, params) {
     console.log('Creating stack with', params);
-
-    var stackTemplate = require(stackTemplate);
-    var userdata = shell.exec("./write-mime-multipart stack/*", {silent: true}).output;
-    userdata = userdata.replace(/\$STACK_NAME/g, stackName) // horrible - need to find a better way to include variables in the cloud-config
-    stackTemplate.Resources.Ec2Instance.Properties.UserData["Fn::Base64"] = userdata;
 
     cloudformation.createStack({
       StackName: stackName,

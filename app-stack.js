@@ -5,6 +5,7 @@ var AWS = require('aws-sdk');
 var Promise = require('es6-promise').Promise;
 var AWSP = require('./promise-aws');
 var AwsStack = require('./aws-stack');
+var shell = require('shelljs');
 
 var creds = new AWS.SharedIniFileCredentials({
   profile: 'company'
@@ -69,7 +70,12 @@ function extractPrivateSubnetDefaultSecurityGroup(state) {
 function createStack(params) {
   var stackName = "nodeapp-" + randomString();
 
-  AwsStack.create('./app-stack.json', stackName, [{
+  var stackTemplate = require('./app-stack.json');
+  var userdata = shell.exec("./write-mime-multipart stack/*", {silent: true}).output;
+  userdata = userdata.replace(/\$STACK_NAME/g, stackName) // horrible - need to find a better way to include variables in the cloud-config
+  stackTemplate.Resources.Ec2Instance.Properties.UserData["Fn::Base64"] = userdata;
+
+  AwsStack.create(stackName, stackTemplate, [{
     ParameterKey: 'VpcId',
     ParameterValue: params.vpcId
   }, {

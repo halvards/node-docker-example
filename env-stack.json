@@ -1,0 +1,150 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Create an environment for apps to be deployed into",
+
+  "Parameters" : {
+    "KeyName" : {
+      "Description" : "Name of and existing EC2 KeyPair to enable SSH access to the instance",
+      "Type" : "String",
+      "Default": "ec2-keypair-ap-syd"
+    }
+  },
+
+  "Resources" : {
+    "Vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "EnableDnsHostnames": true,
+        "EnableDnsSupport": true,
+        "Tags": [{ "Key": "Name", "Value": "Online Tax" }, { "Key": "online-tax", "Value": "" }]
+      }
+    },
+
+    "PublicSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/24",
+        "Tags": [{ "Key": "Name", "Value": "Public subnet" }],
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "PrivateSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.1.0/24",
+        "Tags": [{ "Key": "Name", "Value": "Private subnet" }],
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway"
+    },
+
+    "InternetGatewayAttachment": {
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+      "Properties" : {
+        "InternetGatewayId" : { "Ref": "InternetGateway" },
+        "VpcId" : { "Ref": "Vpc" }
+      }
+    },
+
+    "Nat": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": { "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] },
+        "ImageId": "ami-996402a3",
+        "InstanceType": "t2.micro",
+        "KeyName" : { "Ref" : "KeyName" },
+        "SubnetId": { "Ref": "PublicSubnet" },
+        "Tags": [{ "Key": "Name", "Value": "NAT" }]
+      }
+    },
+
+    "PublicRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "PublicRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": { "Ref": "PublicRouteTable" },
+        "SubnetId": { "Ref": "PublicSubnet" }
+      }
+    },
+
+    "PublicSubnetGatewayTrafficRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": { "Ref": "InternetGateway" },
+        "RouteTableId": { "Ref": "PublicRouteTable" }
+      }
+    },
+
+    "PrivateRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "PrivateRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": { "Ref": "PrivateRouteTable" },
+        "SubnetId": { "Ref": "PrivateSubnet" }
+      }
+    },
+
+    "PrivateSubnetNatTrafficRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "InstanceId": { "Ref": "Nat" },
+        "RouteTableId": { "Ref": "PrivateRouteTable" }
+      }
+    },
+
+    "BastionSshAccessSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Bastion SSH access via port 22",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "Bastion": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": { "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] },
+        "ImageId": "ami-1711732d",
+        "InstanceType": "t2.micro",
+        "KeyName" : { "Ref" : "KeyName" },
+        "SecurityGroupIds" : [{ "Ref" : "BastionSshAccessSecurityGroup" }],
+        "SubnetId": { "Ref": "PublicSubnet" },
+        "Tags": [{ "Key": "Name", "Value": "Bastion" }]
+      }
+    },
+
+    "BastionIp": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "InstanceId": { "Ref": "Bastion" }
+      }
+    }
+  }
+}
