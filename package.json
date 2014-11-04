@@ -11,13 +11,11 @@
   },
   "dependencies": {
     "aws-sdk": "2.0.21",
+    "es6-collections": "0.3.4",
     "es6-promise": "2.0.0",
     "express": "4.9.8",
     "node-uuid": "1.4.1",
     "pg": "3.6.0",
-    "redis": "0.12.1"
-  },
-  "devDependencies": {
     "shelljs": "0.3.0"
   }
 }
