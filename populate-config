@@ -20,7 +20,7 @@ AwsStack.findS3BucketsTagged('online-tax').
   then(function(bucket) {
     return s3.putObject({
       Bucket: bucket.bucketName,
-      Key: 'the-app',
+      Key: 'the-app/latest.config',
       Body: 'export APP_DB_USER=nodeappuser\n' +
             'export APP_DB_PASS=password\n' +
             'export APP_DB_HOST=localhost\n' +

@@ -55,7 +55,7 @@ write_files:
     path: /tmp/resolv.conf
   - content: |
       #!/usr/bin/python
-      import boto;print boto.connect_s3().get_bucket('$BUCKET_NAME').get_key('the-app').get_contents_as_string()
+      import boto;print boto.connect_s3().get_bucket('$BUCKET_NAME').get_key('the-app/latest.config').get_contents_as_string()
     path: /usr/local/bin/get-config
     permissions: '0755'
 
