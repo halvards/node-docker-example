@@ -160,15 +160,17 @@
     "S3Bucket": {
       "Type": "AWS::S3::Bucket",
       "Properties": {
-        "BucketName": "config.company.services",
         "Tags": [{ "Key": "online-tax", "Value": "" }]
       }
     }
   },
 
   "Outputs" : {
-    "BastionPublicDnsName" : {
-      "Value" : { "Fn::GetAtt" : [ "Bastion", "PublicDnsName" ] }
+    "BastionPublicDnsName": {
+      "Value": { "Fn::GetAtt" : [ "Bastion", "PublicDnsName" ] }
+    },
+    "S3BucketName": {
+      "Value": { "Ref": "S3Bucket" }
     }
   }
 }

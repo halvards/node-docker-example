@@ -13,8 +13,12 @@ var creds = new AWS.SharedIniFileCredentials({
 AWS.config.credentials = creds;
 
 var ec2 = new AWSP.EC2({
-  "apiVersion": "2014-09-01",
-  "region": "ap-southeast-2"
+  apiVersion: '2014-09-01',
+  region: 'ap-southeast-2'
+});
+
+var s3 = new AWSP.S3({
+  region: 'ap-southeast-2'
 });
 
 function findOnlineTaxVpc() {
@@ -70,12 +74,73 @@ function extractPrivateSubnetDefaultSecurityGroup(state) {
   })
 }
 
+function getS3BucketTags(name) {
+  return s3.getBucketTagging({
+    Bucket: name
+  }).then(function(tags) {
+    return {
+      bucketName: name,
+      tags: tags.TagSet,
+    }
+  }, function(err) {
+    if (err.code === 'NoSuchTagSet' || err.code === 'PermanentRedirect') {
+      return {
+        bucketName: name,
+        tags: [],
+      }
+    }
+    
+    throw err
+  })
+}
+
+function listBucketsWithTags() {
+  return s3.listBuckets().
+    then(function(data) {
+      return Promise.all(data.Buckets.map(function(bucket) {
+        return getS3BucketTags(bucket.Name)
+      }))
+    })
+}
+
+function filterBucketsTagged(buckets, name) {
+  return buckets.filter(function(bucket) {
+    return bucket.tags.filter(function(tag) {
+      return tag.Key == name
+    }).length > 0
+  })
+}
+
+function findS3BucketTagged(name) {
+  return listBucketsWithTags().
+    then(function(buckets) {
+      return filterBucketsTagged(buckets, name)[0]
+    })
+}
+
+function findS3Bucket(state) {
+  return findS3BucketTagged('online-tax').
+    then(function(bucket) {
+      state.bucketName = bucket.bucketName
+      return state
+    })
+}
+
 function createStack(params) {
   var stackName = "nodeapp-" + randomString();
+
+  if (typeof stackName === 'undefined') {
+    throw 'Stack name is undefined'
+  }
+
+  if (typeof params.bucketName === 'undefined') {
+    throw 'Bucket name is undefined'
+  }
 
   var stackTemplate = require('./app-stack.json');
   var userdata = shell.exec("./write-mime-multipart stack/*", {silent: true}).output;
   userdata = userdata.replace(/\$STACK_NAME/g, stackName) // horrible - need to find a better way to include variables in the cloud-config
+  userdata = userdata.replace(/\$BUCKET_NAME/g, params.bucketName)
   stackTemplate.Resources.Ec2Instance.Properties.UserData["Fn::Base64"] = userdata;
 
   AwsStack.create(stackName, stackTemplate, [{
@@ -103,6 +168,7 @@ function randomString() {
 findOnlineTaxVpc().
   then(extractPublicAndPrivateSubnets).
   then(extractPrivateSubnetDefaultSecurityGroup).
+  then(findS3Bucket).
   then(createStack).
   catch(function(err) {
     console.log('oh no', err);

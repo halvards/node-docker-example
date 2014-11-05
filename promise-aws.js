@@ -26,5 +26,18 @@ module.exports = {
       };
       return obj;
     }, {});
+  },
+
+  S3: function(params) {
+    var s3 = new AWS.S3(params);
+
+    return ['listBuckets', 'getBucketTagging'].reduce(function(obj, fnname) {
+      obj[fnname] = function(params) {
+        return new Promise(function(resolve, reject) {
+          s3[fnname](params, promiseCallback(resolve, reject));
+        });
+      };
+      return obj;
+    }, {});
   }
 };
