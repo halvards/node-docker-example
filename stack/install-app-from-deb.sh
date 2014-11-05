@@ -2,7 +2,7 @@
 
 set -e
 
-BUCKET=services.company
+BUCKET=%BUCKET_NAME%
 FILE=the-app/latest.deb
 DOWNLOAD_DEST=/tmp/latest.deb
 

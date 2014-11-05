@@ -51,11 +51,11 @@ write_files:
     path: /etc/bind/named.conf.options
   - content: |
       nameserver 127.0.0.1
-      search $STACK_NAME.services.company
+      search %STACK_NAME%.services.company
     path: /tmp/resolv.conf
   - content: |
       #!/usr/bin/python
-      import boto;print boto.connect_s3().get_bucket('$BUCKET_NAME').get_key('the-app/latest.config').get_contents_as_string()
+      import boto;print boto.connect_s3().get_bucket('%BUCKET_NAME%').get_key('the-app/latest.config').get_contents_as_string()
     path: /usr/local/bin/get-config
     permissions: '0755'
 

@@ -95,8 +95,8 @@ function createStack(params) {
 
   var stackTemplate = require('./app-stack.json');
   var userdata = shell.exec("./write-mime-multipart stack/*", {silent: true}).output;
-  userdata = userdata.replace(/\$STACK_NAME/g, stackName) // horrible - need to find a better way to include variables in the cloud-config
-  userdata = userdata.replace(/\$BUCKET_NAME/g, params.bucketName)
+  userdata = userdata.replace(/%STACK_NAME%/g, stackName) // horrible - need to find a better way to include variables in the cloud-config
+  userdata = userdata.replace(/%BUCKET_NAME%/g, params.bucketName)
   stackTemplate.Resources.Ec2Instance.Properties.UserData["Fn::Base64"] = userdata;
 
   AwsStack.create(stackName, stackTemplate, [{
