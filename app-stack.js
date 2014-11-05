@@ -74,54 +74,10 @@ function extractPrivateSubnetDefaultSecurityGroup(state) {
   })
 }
 
-function getS3BucketTags(name) {
-  return s3.getBucketTagging({
-    Bucket: name
-  }).then(function(tags) {
-    return {
-      bucketName: name,
-      tags: tags.TagSet,
-    }
-  }, function(err) {
-    if (err.code === 'NoSuchTagSet' || err.code === 'PermanentRedirect') {
-      return {
-        bucketName: name,
-        tags: [],
-      }
-    }
-    
-    throw err
-  })
-}
-
-function listBucketsWithTags() {
-  return s3.listBuckets().
-    then(function(data) {
-      return Promise.all(data.Buckets.map(function(bucket) {
-        return getS3BucketTags(bucket.Name)
-      }))
-    })
-}
-
-function filterBucketsTagged(buckets, name) {
-  return buckets.filter(function(bucket) {
-    return bucket.tags.filter(function(tag) {
-      return tag.Key == name
-    }).length > 0
-  })
-}
-
-function findS3BucketTagged(name) {
-  return listBucketsWithTags().
-    then(function(buckets) {
-      return filterBucketsTagged(buckets, name)[0]
-    })
-}
-
 function findS3Bucket(state) {
-  return findS3BucketTagged('online-tax').
-    then(function(bucket) {
-      state.bucketName = bucket.bucketName
+  return AwsStack.findS3BucketsTagged('online-tax').
+    then(function(buckets) {
+      state.bucketName = buckets[0].bucketName
       return state
     })
 }

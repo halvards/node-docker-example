@@ -1,33 +1,36 @@
-#!/usr/bin/env python
+#!/usr/bin/env node
 
-import boto
+var AWS = require('aws-sdk');
+var AwsStack = require('./aws-stack');
+var AWSP = require('./promise-aws');
 
-def find_environment_bucket(s3):
-  buckets = s3.get_all_buckets()
+var creds = new AWS.SharedIniFileCredentials({
+  profile: 'company'
+});
+AWS.config.credentials = creds;
 
-  for bucket in buckets:
-    try:
-      for tagset in bucket.get_tags():
-        for tag in tagset:
-          if tag.key == 'online-tax':
-            return bucket
-    except boto.exception.S3ResponseError:
-      pass
+var s3 = new AWSP.S3({
+  region: 'ap-southeast-2'
+});
 
-s3 = boto.connect_s3()
-
-environment_bucket = find_environment_bucket(s3)
-
-if environment_bucket == None:
-  print 'Unable to find environment bucket'
-  exit()
-
-key = environment_bucket.get_key('the-app', validate=False)
-
-key.set_contents_from_string('''
-export APP_DB_USER=nodeappuser
-export APP_DB_PASS=password
-export APP_DB_HOST=localhost
-export APP_DB_PORT=5432
-export APP_DB_NAME=nodeappdb
-''')
+AwsStack.findS3BucketsTagged('online-tax').
+  then(function(buckets) {
+    return buckets[0]
+  }).
+  then(function(bucket) {
+    return s3.putObject({
+      Bucket: bucket.bucketName,
+      Key: 'the-app',
+      Body: 'export APP_DB_USER=nodeappuser\n' +
+            'export APP_DB_PASS=password\n' +
+            'export APP_DB_HOST=localhost\n' +
+            'export APP_DB_PORT=5432\n' +
+            'export APP_DB_NAME=nodeappdb\n'
+    })
+  })
+  .then(function() {
+    console.log('Config updated')
+  }).
+  catch(function(err) {
+    console.log('Failed to upload config', err)
+  })
