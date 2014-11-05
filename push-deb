@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+
+var AWS = require('aws-sdk');
+var AwsStack = require('./aws-stack');
+var AWSP = require('./promise-aws');
+var fs = require('fs');
+
+var args = process.argv.slice(2)
+
+if (args.length === 0) {
+  console.log('Usage: push-deb [deb package]')
+  process.exit(1)
+}
+
+var debFilename = args[0]
+
+var creds = new AWS.SharedIniFileCredentials({
+  profile: 'company'
+});
+AWS.config.credentials = creds;
+
+var s3 = new AWSP.S3({
+  region: 'ap-southeast-2'
+});
+
+AwsStack.findS3BucketsTagged('online-tax').
+  then(function(buckets) {
+    return buckets[0]
+  }).
+  then(function(bucket) {
+    return s3.putObject({
+      Bucket: bucket.bucketName,
+      Key: 'the-app/latest.deb',
+      Body: fs.readFileSync(debFilename)
+    })
+  })
+  .then(function() {
+    console.log('Pushed', debFilename, 'successfully')
+  }).
+  catch(function(err) {
+    console.log('Failed to upload config', err)
+  })

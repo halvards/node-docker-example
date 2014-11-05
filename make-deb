@@ -1,8 +1,13 @@
 #!/usr/bin/env sh
 
+set -e
+
 VERSION='1.0'
 ITERATION='1'
 NAME='the-app'
+ARCH=amd64
+
+FILENAME=$NAME\_$VERSION-$ITERATION\_$ARCH.deb
 
 fpm -f -s dir -t deb \
   --name $NAME \
@@ -15,7 +20,9 @@ fpm -f -s dir -t deb \
   --depends nodejs \
   --directories /opt/$NAME \
   --config-files /etc/init/$NAME.conf \
-  --architecture amd64 \
+  --architecture $ARCH \
   app.js=/opt/$NAME/app.js \
   node_modules=/opt/$NAME \
-  package/upstart.conf=/etc/init/$NAME.conf
+  package/upstart.conf=/etc/init/$NAME.conf > /dev/null
+
+echo $FILENAME
