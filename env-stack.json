@@ -168,7 +168,7 @@
 
   "Outputs" : {
     "BastionPublicDnsName" : {
-      "Value" : { "Fn::GetAtt" : [ "Bastion", "DNSName" ] }
+      "Value" : { "Fn::GetAtt" : [ "Bastion", "PublicDnsName" ] }
     }
   }
 }
