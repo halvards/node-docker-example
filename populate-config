@@ -2,9 +2,27 @@
 
 import boto
 
+def find_environment_bucket(s3):
+  buckets = s3.get_all_buckets()
+
+  for bucket in buckets:
+    try:
+      for tagset in bucket.get_tags():
+        for tag in tagset:
+          if tag.key == 'online-tax':
+            return bucket
+    except boto.exception.S3ResponseError:
+      pass
+
 s3 = boto.connect_s3()
-bucket = s3.get_bucket('config.company.services')
-key = bucket.get_key('the-app')
+
+environment_bucket = find_environment_bucket(s3)
+
+if environment_bucket == None:
+  print 'Unable to find environment bucket'
+  exit()
+
+key = environment_bucket.get_key('the-app', validate=False)
 
 key.set_contents_from_string('''
 export APP_DB_USER=nodeappuser
